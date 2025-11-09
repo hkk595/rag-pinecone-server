@@ -73,12 +73,11 @@ CLAUDE.md
 
 # Docker files
 Dockerfile
-Dockerfile.lambda
 .dockerignore
 docker-compose.yml
 
 # Deployment scripts
-deploy-lambda.sh
+deploy.sh
 
 # CI/CD
 .github/
