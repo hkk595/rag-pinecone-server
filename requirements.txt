@@ -1,0 +1,8 @@
+fastapi==0.121.0
+uvicorn[standard]==0.38.0
+pinecone[grpc]==7.3.0
+openai==2.7.1
+pydantic==2.12.4
+pydantic-settings==2.11.0
+python-dotenv==1.2.1
+httpx==0.28.1
