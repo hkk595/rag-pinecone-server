@@ -1,5 +1,5 @@
 services:
-  rag-app:
+  rag-pinecone-server:
     image: rag-pinecone-server:0.1
     container_name: rag-pinecone-server
     ports:
