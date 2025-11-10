@@ -7,7 +7,7 @@ set -e  # Exit on error
 
 # Configuration - Modify these variables as needed
 AWS_REGION="${AWS_REGION:-us-east-1}"
-ECR_REPOSITORY="${ECR_REPOSITORY:-rag-app-repo}"
+ECR_REPOSITORY="${ECR_REPOSITORY:-rag-pinecone-server}"
 IMAGE_TAG="${1:-latest}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
 

@@ -1,6 +1,6 @@
 services:
   rag-app:
-    image: rag:v1
+    image: rag-pinecone-server:0.1
     container_name: rag-pinecone-server
     ports:
       - "8000:8000"
