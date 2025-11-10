@@ -1,13 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from typing import List
 import traceback
+import time
 import logging
 
 from api.models import (
     QueryRequest, QueryResponse, Source,
     IndexRequest, IndexResponse,
     HealthResponse, ServiceStatus,
-    ErrorResponse
 )
 from services import EmbeddingService, VectorDBService, LLMService
 from utils.helpers import format_context, prepare_documents_for_indexing
@@ -80,13 +79,19 @@ async def query(
     """
     try:
         # Step 1: Generate query embedding
+        embedding_start = time.time()
         query_embedding = embedding_svc.generate_embedding(request.query)
+        embedding_time = time.time() - embedding_start
+        logging.info(f"** Embedding time: {embedding_time:.2f}s")
 
         # Step 2: Search vector database
+        search_start = time.time()
         search_results = vector_db_svc.search(
             query_embedding=query_embedding,
             top_k=request.top_k
         )
+        search_time = time.time() - search_start
+        logger.info(f"** Search time: {search_time:.2f}s")
         # logger.info(f"Query results:\n{search_results}")
 
         # Step 3: Format context
@@ -94,11 +99,14 @@ async def query(
         # logger.info(f"Context:\n{context}")
 
         # Step 4: Generate response
+        llm_start = time.time()
         response_text = llm_svc.generate_response(
             query=request.query,
             context=context,
             temperature=request.temperature
         )
+        llm_time = time.time() - llm_start
+        logger.info(f"** LLM time: {llm_time:.2f}s")
 
         # Format sources for response
         sources = [
