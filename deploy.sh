@@ -7,9 +7,16 @@ set -e  # Exit on error
 
 # Configuration - Modify these variables as needed
 AWS_REGION="${AWS_REGION:-us-east-1}"
-ECR_REPOSITORY="${ECR_REPOSITORY:-rag-pinecone-server}"
+ECR_REPOSITORY="${ECR_REPOSITORY:-rag-app-repo}"
 IMAGE_TAG="${1:-latest}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
+
+# Construct the full ECR repository URI
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+ECR_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+
+# Docker variables
+DOCKER_PLATFORM="linux/amd64"
 
 # Colors for output
 RED='\033[0;31m'
@@ -74,7 +81,7 @@ setup_ecr_repository() {
 ecr_login() {
     log_info "Authenticating Docker with ECR..."
     aws ecr get-login-password --region "$AWS_REGION" | \
-        docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+        docker login --username AWS --password-stdin ${ECR_REGISTRY}
     log_info "Docker authentication successful"
 }
 
@@ -85,12 +92,18 @@ build_image() {
     # Get git commit hash for additional tagging (if in git repo)
     GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
+#    docker build \
+#        --platform $DOCKER_PLATFORM \
+#        --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+#        --build-arg GIT_COMMIT="$GIT_COMMIT" \
+#        -t "$ECR_REPOSITORY:$IMAGE_TAG" \
+#        -t "$ECR_REPOSITORY:$GIT_COMMIT" \
+#        .
+
     docker build \
-        --platform linux/amd64 \
+        --platform $DOCKER_PLATFORM \
         --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-        --build-arg GIT_COMMIT="$GIT_COMMIT" \
         -t "$ECR_REPOSITORY:$IMAGE_TAG" \
-        -t "$ECR_REPOSITORY:$GIT_COMMIT" \
         .
 
     log_info "Docker image built successfully"
@@ -100,16 +113,14 @@ build_image() {
 tag_image() {
     log_info "Tagging image for ECR..."
 
-    ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY"
-
     docker tag "$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_URI:$IMAGE_TAG"
 
     # Also tag with git commit if available
-    GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "")
-    if [ -n "$GIT_COMMIT" ]; then
-        docker tag "$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_URI:$GIT_COMMIT"
-        log_info "Tagged with commit hash: $GIT_COMMIT"
-    fi
+#    GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "")
+#    if [ -n "$GIT_COMMIT" ]; then
+#        docker tag "$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_URI:$GIT_COMMIT"
+#        log_info "Tagged with commit hash: $GIT_COMMIT"
+#    fi
 
     log_info "Image tagged successfully"
 }
@@ -118,22 +129,19 @@ tag_image() {
 push_image() {
     log_info "Pushing image to ECR..."
 
-    ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY"
-
     docker push "$ECR_URI:$IMAGE_TAG"
 
     # Push git commit tag if available
-    GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "")
-    if [ -n "$GIT_COMMIT" ]; then
-        docker push "$ECR_URI:$GIT_COMMIT"
-    fi
+#    GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "")
+#    if [ -n "$GIT_COMMIT" ]; then
+#        docker push "$ECR_URI:$GIT_COMMIT"
+#    fi
 
     log_info "Image pushed successfully"
 }
 
 # Display summary
 display_summary() {
-    ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY"
     GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
     echo ""
@@ -144,7 +152,7 @@ display_summary() {
     log_info "Region:         $AWS_REGION"
     log_info "Repository:     $ECR_REPOSITORY"
     log_info "Image Tag:      $IMAGE_TAG"
-    log_info "Git Commit:     $GIT_COMMIT"
+#    log_info "Git Commit:     $GIT_COMMIT"
     log_info "ECR URI:        $ECR_URI:$IMAGE_TAG"
     log_info "==================================================================="
     echo ""
